@@ -5,13 +5,29 @@ require 'date'
 db = SQLite3::Database.new('dev.db')
 db.default_synchronous = 'OFF'
 
-pairs = db.execute("SELECT station_id, time FROM available_bikes");
-pairs.each_with_index do |pair, i|
-  next if pair[1].is_a? Fixnum
-  puts "#{i / pairs.length * 100}%" if ((i / pairs.length * 1000) % 1 != 0)
+conn = PG.connect( dbname: 'citibike', port: 5433 )
 
-  d = DateTime.parse pair[1]
-  db.execute("UPDATE available_bikes SET time = ? WHERE station_id = ? AND time = ?", d.strftime('%s'), [pair[0], pair[1]])
-  #break
+rows = db.execute("SELECT station_id, time, count FROM available_bikes");
+
+puts "Before count: "
+puts conn.exec("SELECT count(*) from available_bikes;").first["count"]
+
+rows.each_with_index do |row, i|
+  d = nil
+  if row[1].is_a? Fixnum
+    d = Time.at(row[1]).to_datetime
+  else
+    d = DateTime.parse row[1]
+  end
+
+  query = <<-SQL
+    INSERT INTO available_bikes
+    (station_id, time, count)
+    VALUES
+    ($1, $2, $3)
+  SQL
+  conn.exec_params query, [row[0], d, row[2]]
 end
-puts db.execute("SELECT station_id, time, date(time) FROM available_bikes LIMIT 10");
+
+puts "After count: "
+puts conn.exec("SELECT count(*) from available_bikes;").first["count"]

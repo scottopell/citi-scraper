@@ -1,10 +1,8 @@
 require 'bundler/setup'
 Bundler.require(:default, :test, :development)
+require 'date'
 
-db = SQLite3::Database.new('data.db')
-
-# http://www.sqlite.org/faq.html#q19
-db.default_synchronous = 'OFF'
+conn = PG.connect( dbname: 'citibike', port: 5433 )
 
 # primary key is both id and total_docks because if a station adds or removes
 # capacity at some point, then we want to record this event as well as the time
@@ -14,26 +12,28 @@ db.default_synchronous = 'OFF'
 #   figure out a good way to record the station primary key in the
 #   available_bikes table so that you don't have to compare the dates.
 #   the current way seems hacky (and slow)
-db.execute_batch <<-SQL
+conn.exec <<-SQL
   CREATE TABLE if not exists stations (
-           id            INTEGER        NOT NULL,
-           status        VARCHAR(30),
-           total_docks   INTEGER,
-           latitude      FLOAT,
-           longitude     FLOAT,
-           label         VARCHAR(30)    NOT NULL,
-           time          DATETIME,
+           id            INTEGER      NOT NULL,
+           status        TEXT         NOT NULL,
+           total_docks   INTEGER      NOT NULL,
+           latitude      FLOAT        NOT NULL,
+           longitude     FLOAT        NOT NULL,
+           label         TEXT         NOT NULL,
+           time          TIMESTAMP    NOT NULL,
            PRIMARY KEY (id, total_docks)
   );
+SQL
+conn.exec <<-SQL
   CREATE TABLE if not exists available_bikes (
            station_id   INTEGER   NOT NULL,
-           time         DATETIME  NOT NULL,
+           time         TIMESTAMP NOT NULL,
            count        INTEGER   NOT NULL
   );
 SQL
 
 
-def scrape db
+def scrape conn
   # http://citibikenyc.com/system-data
   response = HTTParty.get('http://citibikenyc.com/stations/json')
 
@@ -46,21 +46,35 @@ def scrape db
       station['latitude'],
       station['longitude'],
       station['stationName'],
-      station['lastCommunicationTime']
+      DateTime.parse(station['lastCommunicationTime'])
     ]
     # this will ignore if the primary key already exists.
     # No need to update this data every single time, this won't change.
-    db.execute("INSERT OR IGNORE INTO stations (id, status, total_docks, latitude, longitude, label, time) VALUES (?, ?, ?, ?, ?, ?, ?)", station_row)
+    query = <<-SQL
+      INSERT INTO stations
+      (id, status, total_docks, latitude, longitude, label, time)
+      VALUES
+      ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (id, total_docks)
+      DO NOTHING
+    SQL
+    conn.exec_params query, station_row
 
     # only add the available count if the station is in service.
     # Otherwise its pretty pointless
     if (station['statusValue'] == "In Service")
       available_bikes_row = [
         station['id'],
-        station['lastCommunicationTime'],
+        DateTime.parse(station['lastCommunicationTime']),
         station['availableBikes']
       ]
-      db.execute("INSERT INTO available_bikes (station_id, time, count) VALUES (?, ?, ?)", available_bikes_row)
+      query = <<-SQL
+        INSERT INTO available_bikes
+        (station_id, time, count)
+        VALUES
+        ($1, $2, $3)
+      SQL
+      conn.exec_params query, available_bikes_row
     end
   end
 end
@@ -72,7 +86,7 @@ loop do
   start = Time.new
   puts "Scraping more data at #{start}"
 
-  scrape db
+  scrape conn
   # subtract the amount of time it took to actually scrape to maintain exactly
   # every half hour
   sleep sleep_duration - (Time.new - start)
