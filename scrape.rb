@@ -2,7 +2,7 @@ require 'bundler/setup'
 Bundler.require(:default, :test, :development)
 require 'date'
 
-conn = PG.connect( dbname: 'citibike', port: 5433 )
+conn = PG.connect(dbname: 'citibike', port: 5433)
 
 # primary key is both id and total_docks because if a station adds or removes
 # capacity at some point, then we want to record this event as well as the time
@@ -32,8 +32,22 @@ conn.exec <<-SQL
   );
 SQL
 
+conn.exec <<-SQL
+  CREATE INDEX if not exists dow_idx
+    ON available_bikes ((extract(dow from time)));
+SQL
 
-def scrape conn
+conn.exec <<-SQL
+  CREATE INDEX if not exists idx_epoch_time
+    ON available_bikes ((extract(epoch from time::time)));
+SQL
+
+conn.exec <<-SQL
+  CREATE INDEX if not exists station_id_idx
+    ON available_bikes (station_id);
+SQL
+
+def scrape(conn)
   # http://citibikenyc.com/system-data
   response = HTTParty.get('http://citibikenyc.com/stations/json')
 
@@ -62,20 +76,19 @@ def scrape conn
 
     # only add the available count if the station is in service.
     # Otherwise its pretty pointless
-    if (station['statusValue'] == "In Service")
-      available_bikes_row = [
-        station['id'],
-        DateTime.parse(station['lastCommunicationTime']),
-        station['availableBikes']
-      ]
-      query = <<-SQL
+    next unless station['statusValue'] == 'In Service'
+    available_bikes_row = [
+      station['id'],
+      DateTime.parse(station['lastCommunicationTime']),
+      station['availableBikes']
+    ]
+    query = <<-SQL
         INSERT INTO available_bikes
         (station_id, time, count)
         VALUES
         ($1, $2, $3)
-      SQL
-      conn.exec_params query, available_bikes_row
-    end
+    SQL
+    conn.exec_params query, available_bikes_row
   end
 end
 

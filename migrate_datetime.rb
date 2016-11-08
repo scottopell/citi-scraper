@@ -5,20 +5,20 @@ require 'date'
 db = SQLite3::Database.new('dev.db')
 db.default_synchronous = 'OFF'
 
-conn = PG.connect( dbname: 'citibike', port: 5433 )
+conn = PG.connect(dbname: 'citibike', port: 5433)
 
-rows = db.execute("SELECT station_id, time, count FROM available_bikes");
+rows = db.execute('SELECT station_id, time, count FROM available_bikes')
 
-puts "Before count: "
-puts conn.exec("SELECT count(*) from available_bikes;").first["count"]
+puts 'Before count: '
+puts conn.exec('SELECT count(*) from available_bikes;').first['count']
 
-rows.each_with_index do |row, i|
+rows.each_with_index do |row, _i|
   d = nil
-  if row[1].is_a? Fixnum
-    d = Time.at(row[1]).to_datetime
-  else
-    d = DateTime.parse row[1]
-  end
+  d = if row[1].is_a? Integer
+        Time.at(row[1]).to_datetime
+      else
+        DateTime.parse row[1]
+      end
 
   query = <<-SQL
     INSERT INTO available_bikes
@@ -29,5 +29,5 @@ rows.each_with_index do |row, i|
   conn.exec_params query, [row[0], d, row[2]]
 end
 
-puts "After count: "
-puts conn.exec("SELECT count(*) from available_bikes;").first["count"]
+puts 'After count: '
+puts conn.exec('SELECT count(*) from available_bikes;').first['count']

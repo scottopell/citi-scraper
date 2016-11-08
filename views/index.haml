@@ -1,0 +1,95 @@
+
+:css
+  .day {
+    cursor: pointer;
+    border: 1px solid black;
+    border-radius: 3px;
+    box-shadow:  3px 3px 0px 0px rgba(0,0,0,0.75);
+    margin-right: 4px;
+    padding: 3px;
+  }
+
+  .day:hover {
+    box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.75);
+  }
+
+  .days {
+    margin-bottom: 7px;
+  }
+
+  .day.selected {
+    box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.75);
+  }
+
+:javascript
+  document.addEventListener('DOMContentLoaded', main, false);
+
+
+  function main(){
+    "use strict";
+    // submit
+    document
+      .querySelector("input[type=submit]")
+      .addEventListener('click', function(){
+        let time = document.querySelector("input[type=time]").value;
+        if (document.querySelector(".day.selected") === null
+            || time === ""){
+          return;
+        }
+        let hours = time.split(':')[0];
+        let mins = time.split(':')[1];
+        let secondsSinceStartOfDay = hours * 60 * 60 + mins * 60;
+        console.log(time);
+        let obj = {
+          dow: Number(document.querySelector(".day.selected").dataset.dow),
+          time: secondsSinceStartOfDay
+        };
+
+        console.log(obj);
+        // TODO make http request and display results
+    }, false);
+
+    // select dow
+    document.querySelectorAll(".day").forEach(function(el){
+      el.addEventListener("click", function(evt){
+        document.querySelectorAll(".day").forEach(function(el){
+          el.className = "day";
+        });
+        evt.target.className += " selected";
+      });
+    });
+  }
+
+%h1 CanIBike.NYC
+
+.input
+  %label
+    When would you like to leave?
+  .days
+    %span.day{"data-dow": '0'}
+      Sun
+    %span.day{"data-dow": '1'}
+      Mon
+    %span.day{"data-dow": '2'}
+      Tues
+    %span.day{"data-dow": '3'}
+      Wed
+    %span.day{"data-dow": '4'}
+      Thurs
+    %span.day{"data-dow": '5'}
+      Fri
+    %span.day{"data-dow": '6'}
+      Sat
+  .time
+    %input{type: "time"}
+
+  %br
+
+  %label
+    What station?
+  %input{type: "number"}
+
+  %br
+
+  %input{type: "submit"}
+
