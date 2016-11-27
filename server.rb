@@ -3,9 +3,11 @@ Bundler.require(:default, :test, :development)
 
 conn = PG.connect(dbname: 'citibike', port: 5433)
 
-def prob_available(conn, station_id, target_dt)
-  day_of_week = target_dt.wday
-  seconds_since_start_of_day = (target_dt.hour * 60 * 60) + (target_dt.minute * 60)
+set :public_folder, 'public'
+
+def prob_available(conn, station_id, target_time_of_day, target_dow)
+  day_of_week = target_dow
+  seconds_since_start_of_day = (target_time_of_day.hour * 60 * 60) + (target_time_of_day.minute * 60)
 
   # dow means "day of week", returns 0 for sunday, 1 for monday, etc.
   # extract (epoch from time::time) is pretty gnarly.
@@ -48,6 +50,8 @@ def prob_available(conn, station_id, target_dt)
   twenty_mins_in_seconds = 20 * 60
 
   args = [station_id, day_of_week, seconds_since_start_of_day, twenty_mins_in_seconds]
+  puts "Getting probability given the following params:"
+  puts "\t" + args.join("\n\t")
 
   spots_available_results = conn.exec_params(spots_available_query, args)
   total_records_results = conn.exec_params(total_records_query, args)
@@ -63,8 +67,22 @@ end
 #puts d_str
 #puts prob_available(conn, 423, DateTime.parse(d_str))
 
+# GET Params:
+#  station_id
+#  target_time_of_day
+#    9:53:46 AM
+#    09:53 AM
+#    9:53 AM EST
+#  target_dow
+#    0 - sunday
+#    1 - monday
+#    ...
+#    6 - saturday
 get '/prob_available' do
-  prob_available(conn, params['station_id'], DateTime.parse(params['target_dt'])).to_s
+  time_of_day = DateTime.parse(params['target_time_of_day'])
+  dow = params['target_dow']
+
+  prob_available(conn, params['station_id'], time_of_day, dow).to_s
 end
 
 get '/' do
