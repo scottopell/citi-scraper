@@ -1,0 +1,7 @@
+oid  |    table_schema    |       table_name        | row_estimate | total_bytes | index_bytes | toast_bytes | table_bytes |   total    |   index    |   toast    |   table    
+-------+--------------------+-------------------------+--------------+-------------+-------------+-------------+-------------+------------+------------+------------+------------
+2619 | pg_catalog         | pg_statistic            |          402 |      344064 |       32768 |       73728 |      237568 | 336 kB     | 32 kB      | 72 kB      | 232 kB
+1247 | pg_catalog         | pg_type                 |          354 |      163840 |       57344 |             |      106496 | 160 kB     | 56 kB      |            | 104 kB
+16395 | public             | stations                |         1127 |      221184 |       57344 |        8192 |      155648 | 216 kB     | 56 kB      | 8192 bytes | 152 kB
+16403 | public             | available_bikes         |  1.18901e+07 |  1735499776 |  1078222848 |             |   657276928 | 1655 MB    | 1028 MB    |            | 627 MB
+1260 | pg_catalog         | pg_authid               |            1 |       73728 |       32768 |             |       40960 | 72 kB      | 32 kB      |            | 40 kB

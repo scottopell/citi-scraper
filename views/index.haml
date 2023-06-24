@@ -19,11 +19,13 @@
 
   .day.selected {
     box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.75);
+    color: white;
+    background-color: black;
   }
 
   .results {
     line-height: 1.5;
-    font-size: 300px;
+    font-size: 275px;
     font-weight: bold;
   }
 
@@ -35,7 +37,7 @@
   %label
     When would you like to leave?
   .days
-    %span.day{"data-dow": '0'}
+    %span.day.selected{"data-dow": '0'}
       Sun
     %span.day{"data-dow": '1'}
       Mon
@@ -50,13 +52,13 @@
     %span.day{"data-dow": '6'}
       Sat
   .time
-    %input{type: "time"}
+    %input{type: "time", value: "09:00"}
 
   %br
 
   %label
     What station?
-  %input#station_id{type: "number"}
+  %input#station_id{type: "number", value: 423}
 
   %br
 
